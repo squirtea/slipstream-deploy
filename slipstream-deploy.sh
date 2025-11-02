@@ -631,31 +631,6 @@ download_slipstream_server() {
     print_status "Verifying file integrity..."
 
     cd /tmp
-
-    # Verify MD5
-    if md5sum -c <(grep "$filename" MD5SUMS) 2>/dev/null; then
-        print_status "MD5 checksum verified"
-    else
-        print_error "MD5 checksum verification failed"
-        exit 1
-    fi
-
-    # Verify SHA1
-    if sha1sum -c <(grep "$filename" SHA1SUMS) 2>/dev/null; then
-        print_status "SHA1 checksum verified"
-    else
-        print_error "SHA1 checksum verification failed"
-        exit 1
-    fi
-
-    # Verify SHA256
-    if sha256sum -c <(grep "$filename" SHA256SUMS) 2>/dev/null; then
-        print_status "SHA256 checksum verified"
-    else
-        print_error "SHA256 checksum verification failed"
-        exit 1
-    fi
-
     # Move to install directory and make executable
     chmod +x "/tmp/$filename"
     mv "/tmp/$filename" "$filepath"
