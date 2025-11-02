@@ -638,7 +638,24 @@ download_slipstream_server() {
     print_status "slipstream-server installed successfully"
 }
 
+# Function to create slipstream user
+create_slipstream_user() {
+    print_status "Creating slipstream user..."
 
+    if ! id "$SLIPSTREAM_USER" &>/dev/null; then
+        useradd -r -s /bin/false -d /nonexistent -c "slipstream service user" "$SLIPSTREAM_USER"
+        print_status "Created user: $SLIPSTREAM_USER"
+    else
+        print_status "User $SLIPSTREAM_USER already exists"
+    fi
+
+    # Create config directory first
+    mkdir -p "$CONFIG_DIR"
+
+    # Set ownership of config directory
+    chown -R "$SLIPSTREAM_USER":"$SLIPSTREAM_USER" "$CONFIG_DIR"
+    chmod 750 "$CONFIG_DIR"
+}
 
 # Function to generate keys
 generate_keys() {
