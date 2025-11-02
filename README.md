@@ -225,6 +225,7 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 ## Acknowledgments
 
 - [dnstt](https://dnstt.network) by David Fifield
+- [slipstream](https://github.com/EndPositive/slipstream) by Jop Zitman
 - [dnstt-deploy](https://github.com/bugfloyd/dnstt-deploy) by Yashar Hosseinpour
 - [Dante SOCKS server](https://www.inet.no/dante/) for SOCKS proxy functionality
 
