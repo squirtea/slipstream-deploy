@@ -1064,7 +1064,7 @@ main() {
     # Get user input
     get_user_input
 
-    # Download and verify slipstream-server
+    # Download slipstream-server
     download_slipstream_server
 
     # Create slipstream user
