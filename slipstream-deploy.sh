@@ -990,7 +990,7 @@ Wants=network.target
 Type=simple
 User=$SLIPSTREAM_USER
 Group=$SLIPSTREAM_USER
-ExecStart=${INSTALL_DIR}/slipstream-server ---dns-listen-port=${SLIPSTREAM_PORT} --target-address=127.0.0.1:${target_port} --domain=${NS_SUBDOMAIN} --cert=${PUBLIC_KEY_FILE} --key=${PRIVATE_KEY_FILE}
+ExecStart=${INSTALL_DIR}/slipstream-server --dns-listen-port=${SLIPSTREAM_PORT} --target-address=127.0.0.1:${target_port} --domain=${NS_SUBDOMAIN} --cert=${PUBLIC_KEY_FILE} --key=${PRIVATE_KEY_FILE}
 Restart=always
 RestartSec=5
 KillMode=mixed
