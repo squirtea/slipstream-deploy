@@ -35,7 +35,6 @@ Go into your name registrar's configuration panel and add these records:
 - **Smart configuration**: Persistent settings and automatic key reuse
 - **Flexible tunneling**: SSH mode or SOCKS proxy mode
 - **Network ready**: Automatic firewall and iptables configuration
-- **Binary verification**: MD5, SHA1, and SHA256 checksum validation
 - **Official binaries**: Downloads from [slipstream/releases](https://github.com/EndPositive/slipstream/releases/)
 
 ## Quick Start
