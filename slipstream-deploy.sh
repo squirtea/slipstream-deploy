@@ -24,7 +24,6 @@ SCRIPT_URL="https://raw.githubusercontent.com/squirtea/slipstream-deploy/main/sl
 INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="/etc/slipstream"
 SYSTEMD_DIR="/etc/systemd/system"
-SLIPSTREAM_PORT="5300"
 SLIPSTREAM_USER="slipstream"
 CONFIG_FILE="${CONFIG_DIR}/slipstream-server.conf"
 SCRIPT_INSTALL_PATH="/usr/local/bin/slipstream-deploy"
@@ -206,15 +205,6 @@ show_configuration_info() {
     echo -e "  Service status: $service_status"
     echo ""
 
-    # Show public key if it exists
-    if [ -f "$PUBLIC_KEY_FILE" ]; then
-        echo -e "${BLUE}Public Key Content:${NC}"
-        echo -e "${YELLOW}$(cat "$PUBLIC_KEY_FILE")${NC}"
-        echo ""
-    else
-        print_warning "Public key file not found: $PUBLIC_KEY_FILE"
-    fi
-
     echo -e "${BLUE}Management Commands:${NC}"
     echo -e "  Run menu:           ${YELLOW}slipstream-deploy${NC}"
     echo -e "  Start service:      ${YELLOW}systemctl start slipstream-server${NC}"
@@ -236,6 +226,7 @@ show_configuration_info() {
 
     echo ""
 }
+
 check_for_updates() {
     # Only check for updates if we're running from the installed location
     if [ "$0" = "$SCRIPT_INSTALL_PATH" ]; then
@@ -282,6 +273,7 @@ save_config() {
 # Generated on $(date)
 
 NS_SUBDOMAIN="$NS_SUBDOMAIN"
+SLIPSTREAM_PORT="$SLIPSTREAM_PORT"
 TUNNEL_MODE="$TUNNEL_MODE"
 PRIVATE_KEY_FILE="$PRIVATE_KEY_FILE"
 PUBLIC_KEY_FILE="$PUBLIC_KEY_FILE"
@@ -329,13 +321,6 @@ print_success_box() {
     echo -e "  ${text_color}Tunnel mode: $TUNNEL_MODE${reset}"
     echo -e "  ${text_color}Service user: $SLIPSTREAM_USER${reset}"
     echo -e "  ${text_color}Listen port: $SLIPSTREAM_PORT (DNS traffic redirected from port 53)${reset}"
-    echo ""
-
-    # Public Key
-    echo -e "${header_color}Public Key Content:${reset}"
-    local pub_key_content
-    pub_key_content=$(cat "$PUBLIC_KEY_FILE")
-    echo -e "${key_color}$pub_key_content${reset}"
     echo ""
 
     # Script Location
@@ -533,10 +518,12 @@ install_dependencies() {
 get_user_input() {
     # Load existing configuration if available
     local existing_domain=""
+	local existing_port=""
     local existing_mode=""
 
     if load_existing_config; then
         existing_domain="$NS_SUBDOMAIN"
+		existing_port="$SLIPSTREAM_PORT"
         existing_mode="$TUNNEL_MODE"
         print_status "Found existing configuration for domain: $existing_domain"
     fi
@@ -561,6 +548,23 @@ get_user_input() {
             print_error "Please enter a valid subdomain"
         fi
     done
+
+    # Get Listen port
+    if [[ -n "$existing_port" ]]; then
+        print_question "Enter Listen port (current: $existing_port): "
+    else
+        print_question "Enter Listen port > 1024 (default: 5300): "
+    fi
+    read -r SLIPSTREAM_PORT
+
+    # Use existing listen port if user just presses enter, otherwise use default
+    if [[ -z "$SLIPSTREAM_PORT" ]]; then
+        if [[ -n "$existing_port" ]]; then
+            SLIPSTREAM_PORT="$existing_port"
+        else
+            SLIPSTREAM_PORT="5300"
+        fi
+    fi
 
     # Get tunnel mode
     while true; do
@@ -603,6 +607,7 @@ get_user_input() {
 
     print_status "Configuration:"
     print_status "  Nameserver subdomain: $NS_SUBDOMAIN"
+	print_status "  Listen port: $SLIPSTREAM_PORT"
     print_status "  Tunnel mode: $TUNNEL_MODE"
 }
 
@@ -694,9 +699,6 @@ generate_keys() {
         print_status "  Public key: $PUBLIC_KEY_FILE"
     fi
 
-    # Always display public key content
-    print_status "Public key content:"
-    cat "$PUBLIC_KEY_FILE"
 }
 
 # Function to configure iptables rules
@@ -983,8 +985,10 @@ create_systemd_service() {
     cat > "$service_file" << EOF
 [Unit]
 Description=slipstream DNS Tunnel Server
-After=network.target
-Wants=network.target
+After=network-online.target
+Wants=network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
 
 [Service]
 Type=simple
