@@ -78,6 +78,7 @@ This will show an interactive menu with these options:
 
 During the setup (option 1), you'll be prompted for:
 - **Nameserver subdomain** (e.g., `s.example.com`)
+- **Listen port** (default: 5300)
 - **Tunnel mode** (SSH or SOCKS)
 
 ## Configuration
