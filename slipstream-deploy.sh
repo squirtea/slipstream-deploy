@@ -19,7 +19,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Global variables
-DNSTT_BASE_URL="https://github.com/EndPositive/slipstream/releases/download/v0.0.1"
+SLIPSTREAM_BASE_URL="https://github.com/EndPositive/slipstream/releases/download/v0.1.0"
 SCRIPT_URL="https://raw.githubusercontent.com/squirtea/slipstream-deploy/main/slipstream-deploy.sh"
 INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="/etc/slipstream"
@@ -613,7 +613,7 @@ get_user_input() {
 
 # Function to download and verify slipstream-server
 download_slipstream_server() {
-    local filename="slipstream-server-v0.0.1-linux-x86_64"
+    local filename="slipstream-server-v0.1.0-linux-x86_64"
     local filepath="${INSTALL_DIR}/slipstream-server"
 
     # Check if file already exists
@@ -625,12 +625,12 @@ download_slipstream_server() {
     print_status "Downloading slipstream-server..."
 
     # Download the binary
-    curl -L -o "/tmp/$filename" "${DNSTT_BASE_URL}/$filename"
+    curl -L -o "/tmp/$filename" "${SLIPSTREAM_BASE_URL}/$filename"
 
     # Download checksums
-    curl -L -o "/tmp/MD5SUMS" "${DNSTT_BASE_URL}/MD5SUMS"
-    curl -L -o "/tmp/SHA1SUMS" "${DNSTT_BASE_URL}/SHA1SUMS"
-    curl -L -o "/tmp/SHA256SUMS" "${DNSTT_BASE_URL}/SHA256SUMS"
+    curl -L -o "/tmp/MD5SUMS" "${SLIPSTREAM_BASE_URL}/MD5SUMS"
+    curl -L -o "/tmp/SHA1SUMS" "${SLIPSTREAM_BASE_URL}/SHA1SUMS"
+    curl -L -o "/tmp/SHA256SUMS" "${SLIPSTREAM_BASE_URL}/SHA256SUMS"
 
     # Verify checksums
     print_status "Verifying file integrity..."
