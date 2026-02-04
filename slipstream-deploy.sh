@@ -987,8 +987,6 @@ create_systemd_service() {
 Description=slipstream DNS Tunnel Server
 After=network-online.target
 Wants=network-online.target
-StartLimitBurst=5
-StartLimitIntervalSec=60
 
 [Service]
 Type=simple
@@ -999,6 +997,7 @@ Restart=always
 RestartSec=5
 KillMode=mixed
 TimeoutStopSec=5
+RuntimeMaxSec=2500
 
 # Security settings
 NoNewPrivileges=true
