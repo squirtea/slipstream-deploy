@@ -19,7 +19,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Global variables
-SLIPSTREAM_BASE_URL="https://github.com/EndPositive/slipstream/releases/download/v0.0.1"
+SLIPSTREAM_BASE_URL="https://github.com/EndPositive/slipstream/releases/download/v0.1.0"
 SCRIPT_URL="https://raw.githubusercontent.com/squirtea/slipstream-deploy/main/slipstream-deploy.sh"
 INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="/etc/slipstream"
@@ -613,7 +613,7 @@ get_user_input() {
 
 # Function to download and verify slipstream-server
 download_slipstream_server() {
-    local filename="slipstream-server-v0.0.1-linux-x86_64"
+    local filename="slipstream-server-v0.1.0-linux-x86_64"
     local filepath="${INSTALL_DIR}/slipstream-server"
 
     # Check if file already exists
