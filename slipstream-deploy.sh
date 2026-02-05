@@ -119,9 +119,10 @@ show_menu() {
     echo "3) Check service status"
     echo "4) View service logs"
     echo "5) Show configuration info"
+    echo "6) Uninstall slipstream"
     echo "0) Exit"
     echo ""
-    print_question "Please select an option (0-5): "
+    print_question "Please select an option (0-6): "
 }
 
 # Function to handle menu selection
@@ -153,6 +154,11 @@ handle_menu() {
                 ;;
             5)
                 show_configuration_info
+                ;;
+            6)
+                if uninstall; then
+                    exit 0
+                fi
                 ;;
             0)
                 print_status "Goodbye!"
@@ -304,7 +310,6 @@ print_question() {
 print_success_box() {
     local border_color='\033[1;32m'  # Bright green
     local text_color='\033[1;37m'    # Bright white text
-    local key_color='\033[1;33m'     # Yellow for key
     local header_color='\033[1;36m'  # Cyan for headers
     local reset='\033[0m'
 
@@ -518,12 +523,12 @@ install_dependencies() {
 get_user_input() {
     # Load existing configuration if available
     local existing_domain=""
-	local existing_port=""
+	  local existing_port=""
     local existing_mode=""
 
     if load_existing_config; then
         existing_domain="$NS_SUBDOMAIN"
-		existing_port="$SLIPSTREAM_PORT"
+		    existing_port="$SLIPSTREAM_PORT"
         existing_mode="$TUNNEL_MODE"
         print_status "Found existing configuration for domain: $existing_domain"
     fi
@@ -607,7 +612,7 @@ get_user_input() {
 
     print_status "Configuration:"
     print_status "  Nameserver subdomain: $NS_SUBDOMAIN"
-	print_status "  Listen port: $SLIPSTREAM_PORT"
+	  print_status "  Listen port: $SLIPSTREAM_PORT"
     print_status "  Tunnel mode: $TUNNEL_MODE"
 }
 
@@ -626,14 +631,6 @@ download_slipstream_server() {
 
     # Download the binary
     curl -L -o "/tmp/$filename" "${SLIPSTREAM_BASE_URL}/$filename"
-
-    # Download checksums
-    curl -L -o "/tmp/MD5SUMS" "${SLIPSTREAM_BASE_URL}/MD5SUMS"
-    curl -L -o "/tmp/SHA1SUMS" "${SLIPSTREAM_BASE_URL}/SHA1SUMS"
-    curl -L -o "/tmp/SHA256SUMS" "${SLIPSTREAM_BASE_URL}/SHA256SUMS"
-
-    # Verify checksums
-    print_status "Verifying file integrity..."
 
     cd /tmp
     # Move to install directory and make executable
@@ -1043,8 +1040,159 @@ display_final_info() {
     print_success_box
 }
 
+# Function to remove iptables rules
+remove_iptables_rules() {
+    print_status "Removing iptables rules..."
+
+    if ! command -v iptables &> /dev/null; then
+        print_warning "iptables not found, skipping rule removal"
+        return 0
+    fi
+
+    # Get the primary network interface
+    local interface
+    interface=$(ip route | grep default | awk '{print $5}' | head -1)
+    if [[ -z "$interface" ]]; then
+        interface=$(ip link show | grep -E "^[0-9]+: (eth|ens|enp)" | head -1 | cut -d':' -f2 | awk '{print $1}')
+        if [[ -z "$interface" ]]; then
+            interface="eth0"
+        fi
+    fi
+
+    # Remove IPv4 rules
+    print_status "Removing IPv4 iptables rules..."
+    iptables -D INPUT -p udp --dport "$DNSTT_PORT" -j ACCEPT 2>/dev/null || true
+    iptables -t nat -D PREROUTING -i "$interface" -p udp --dport 53 -j REDIRECT --to-ports "$DNSTT_PORT" 2>/dev/null || true
+
+    # Remove IPv6 rules if available
+    if command -v ip6tables &> /dev/null && [ -f /proc/net/if_inet6 ]; then
+        print_status "Removing IPv6 iptables rules..."
+        ip6tables -D INPUT -p udp --dport "$DNSTT_PORT" -j ACCEPT 2>/dev/null || true
+        ip6tables -t nat -D PREROUTING -i "$interface" -p udp --dport 53 -j REDIRECT --to-ports "$DNSTT_PORT" 2>/dev/null || true
+    fi
+
+    # Save iptables rules after removal
+    save_iptables_rules
+
+    print_status "iptables rules removed"
+}
+
+# Function to remove firewall rules
+remove_firewall_rules() {
+    print_status "Removing firewall rules..."
+
+    # Remove firewalld rules
+    if command -v firewall-cmd &> /dev/null && systemctl is-active --quiet firewalld; then
+        print_status "Removing firewalld rules..."
+        firewall-cmd --permanent --remove-port="$DNSTT_PORT"/udp 2>/dev/null || true
+        firewall-cmd --permanent --remove-port=53/udp 2>/dev/null || true
+        firewall-cmd --reload 2>/dev/null || true
+        print_status "Firewalld rules removed"
+    fi
+
+    # Remove ufw rules
+    if command -v ufw &> /dev/null && ufw status | grep -q "Status: active"; then
+        print_status "Removing ufw rules..."
+        ufw delete allow "$DNSTT_PORT"/udp 2>/dev/null || true
+        ufw delete allow 53/udp 2>/dev/null || true
+        print_status "UFW rules removed"
+    fi
+}
+
+# Function to uninstall slipstream
+uninstall() {
+    print_warning "This will completely remove slipstream from your system."
+    print_question "Are you sure you want to uninstall? (y/N): "
+    read -r confirm
+
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        print_status "Uninstall cancelled."
+        return 1
+    fi
+
+    print_status "Uninstalling slipstream..."
+
+    # Stop and disable services
+    print_status "Stopping services..."
+    if systemctl is-active --quiet slipstream-server; then
+        systemctl stop slipstream-server
+        print_status "slipstream-server service stopped"
+    fi
+
+    if systemctl is-active --quiet danted; then
+        systemctl stop danted
+        print_status "Dante service stopped"
+    fi
+
+    # Disable services
+    if systemctl is-enabled --quiet slipstream-server 2>/dev/null; then
+        systemctl disable slipstream-server
+        print_status "slipstream-server service disabled"
+    fi
+
+    if systemctl is-enabled --quiet danted 2>/dev/null; then
+        systemctl disable danted
+        print_status "Dante service disabled"
+    fi
+
+    # Remove systemd service files
+    print_status "Removing systemd service files..."
+    if [ -f "${SYSTEMD_DIR}/slipstream-server.service" ]; then
+        rm -f "${SYSTEMD_DIR}/slipstream-server.service"
+        systemctl daemon-reload
+        print_status "Systemd service file removed"
+    fi
+
+    # Remove binaries
+    print_status "Removing binaries..."
+    if [ -f "${INSTALL_DIR}/slipstream-server" ]; then
+        rm -f "${INSTALL_DIR}/slipstream-server"
+        print_status "slipstream-server binary removed"
+    fi
+
+    # Remove configuration files
+    print_status "Removing configuration files..."
+    if [ -d "$CONFIG_DIR" ]; then
+        rm -rf "$CONFIG_DIR"
+        print_status "Configuration directory removed: $CONFIG_DIR"
+    fi
+
+    # Remove iptables rules
+    remove_iptables_rules
+
+    # Remove firewall rules
+    remove_firewall_rules
+
+    # Remove slipstream user
+    print_status "Removing slipstream user..."
+    if id "$SLIPSTREAM_USER" &>/dev/null; then
+        userdel "$SLIPSTREAM_USER" 2>/dev/null || true
+        print_status "User $SLIPSTREAM_USER removed"
+    fi
+
+    # Optionally remove slipstream-deploy script
+    print_question "Do you want to remove the slipstream-deploy script itself? (y/N): "
+    read -r remove_script
+    if [[ "$remove_script" =~ ^[Yy]$ ]]; then
+        if [ -f "$SCRIPT_INSTALL_PATH" ]; then
+            rm -f "$SCRIPT_INSTALL_PATH"
+            print_status "slipstream-deploy script removed from $SCRIPT_INSTALL_PATH"
+        fi
+    fi
+
+    print_status "Uninstallation completed successfully!"
+
+    return 0
+}
+
 # Main function
 main() {
+    # Check for uninstall argument
+    if [ "$1" = "uninstall" ]; then
+        uninstall
+        exit 0
+    fi
+
     # If not running from installed location (curl/GitHub), install the script first
     if [ "$0" != "$SCRIPT_INSTALL_PATH" ]; then
         print_status "Installing slipstream-deploy script..."
