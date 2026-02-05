@@ -170,6 +170,30 @@ bash <(curl -Ls https://raw.githubusercontent.com/squirtea/slipstream-deploy/mai
 # The script will detect and install updates automatically
 ```
 
+### Uninstalling
+
+To completely remove dnstt server and all its components:
+
+```bash
+bash <(curl -Ls https://raw.githubusercontent.com/squirtea/slipstream-deploy/main/slipstream-deploy.sh) uninstall
+```
+
+Or if the script is installed:
+
+```bash
+slipstream-deploy uninstall
+```
+
+The uninstall process will:
+- Stop and disable all services (slipstream-server and danted)
+- Remove systemd service files
+- Remove the slipstream-server binary
+- Remove configuration files and directory (`/etc/slipstream`)
+- Remove iptables rules
+- Remove firewall rules (firewalld/ufw)
+- Remove the `slipstream` system user
+- Optionally remove the `slipstream-deploy` script itself (with confirmation)
+
 ## Troubleshooting
 
 ### Using the Built-in Tools
